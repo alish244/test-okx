@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana DApp PoC</title>
+    <style>
+        body { background:#1a1a2e; color:white; font-family:Arial; padding:20px; text-align:center; }
+        button { background:#ff4444; color:white; padding:15px 30px; border:none; border-radius:8px; font-size:16px; margin:20px; cursor:pointer; }
+        pre { background:#0d0d0d; padding:15px; text-align:left; font-size:12px; margin-top:20px; word-wrap:break-word; white-space:pre-wrap; }
+        #status { font-size:18px; font-weight:bold; margin:15px 0; }
+    </style>
+</head>
+<body>
+    <h2 style="color:#00ff88;">OKX Solana AutoApprove PoC</h2>
+    <p id="status" style="color:#ffaa00;">Loading...</p>
+    <button onclick="checkWallet()">Check Wallet</button>
+    <button onclick="testConnect()" style="background:#ff8800;">Test Connect</button>
+    <pre id="log"></pre>
+
+    <script>
+    function log(msg) {
+        document.getElementById('log').innerText += msg + '\n';
+        console.log(msg);
+    }
+
+    function checkWallet() {
+        log('=== Checking Wallets ===');
+
+        // Check window.solana
+        if (typeof window.solana !== 'undefined') {
+            log('[+] window.solana FOUND!');
+            log('    autoApprove: ' + window.solana.autoApprove);
+            log('    isDebug: ' + window.solana.isDebug);
+            try { log('    keys: ' + Object.keys(window.solana).join(', ')); } catch(e) {}
+            document.getElementById('status').style.color = '#ff4444';
+            document.getElementById('status').innerText = 'VULNERABLE: window.solana found!';
+        } else {
+            log('[-] window.solana: NOT FOUND');
+        }
+
+        // Check window.svm
+        if (typeof window.svm !== 'undefined') {
+            log('[+] window.svm FOUND!');
+            log('    autoApprove: ' + window.svm.autoApprove);
+            log('    isDebug: ' + window.svm.isDebug);
+        } else {
+            log('[-] window.svm: NOT FOUND');
+        }
+
+        // Check window.okxwallet
+        if (typeof window.okxwallet !== 'undefined') {
+            log('[+] window.okxwallet FOUND!');
+            try { log('    keys: ' + Object.keys(window.okxwallet).join(', ')); } catch(e) {}
+            if (window.okxwallet.solana) {
+                log('[+] window.okxwallet.solana FOUND!');
+                log('    autoApprove: ' + window.okxwallet.solana.autoApprove);
+                log('    isDebug: ' + window.okxwallet.solana.isDebug);
+            }
+        } else {
+            log('[-] window.okxwallet: NOT FOUND');
+        }
+
+        // Check _solana_
+        if (typeof window._solana_ !== 'undefined') {
+            log('[+] window._solana_ FOUND!');
+        } else {
+            log('[-] window._solana_: NOT FOUND');
+        }
+    }
+
+    async function testConnect() {
+        log('=== Testing Connect ===');
+        try {
+            if (typeof window.solana !== 'undefined') {
+                const resp = await window.solana.connect();
+                log('[+] Connected! pubkey: ' + resp.publicKey.toString());
+                document.getElementById('status').innerText = 'CONNECTED: ' + resp.publicKey.toString();
+            } else if (typeof window.okxwallet !== 'undefined' && window.okxwallet.solana) {
+                const resp = await window.okxwallet.solana.connect();
+                log('[+] Connected via okxwallet! pubkey: ' + resp.publicKey.toString());
+            } else {
+                log('[-] No wallet to connect');
+            }
+        } catch(e) {
+            log('[!] Error: ' + e.message);
+        }
+    }
+
+    window.onload = function() {
+        document.getElementById('status').innerText = 'Page loaded - Press Check Wallet';
+        log('Page loaded at: ' + new Date().toISOString());
+        log('User Agent: ' + navigator.userAgent);
+        // Auto check after 1 second
+        setTimeout(checkWallet, 1000);
+    }
+    </script>
+</body>
+</html>
